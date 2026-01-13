@@ -1,36 +1,37 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// 1. CLAVE MAESTRA (Directa para evitar fallos)
+// CLAVE MAESTRA (Directa para evitar fallos)
 const apiKey = "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo";
-const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function extractPickingData(base64Image: string) {
-  try {
-    // 2. MODELO SEGURO (Gemini 1.5 Flash)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // Limpiamos la imagen
+  const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-    const prompt = "Extract all picking rows from this table. Fields: line, location, article, quantity, unit. Return ONLY a raw JSON array. No Markdown.";
+  // URL directa a Google (Sin librerías raras)
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-    // Limpiamos la imagen por si viene con cabeceras data:image...
-    const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: "Extract all picking rows from this table. Fields: line, location, article, quantity, unit. Return ONLY a raw JSON array. No Markdown." },
+          { inline_data: { mime_type: "image/png", data: cleanBase64 } }
+        ]
+      }]
+    })
+  });
 
-    const imagePart = {
-      inlineData: {
-        data: cleanBase64,
-        mimeType: "image/png"
-      }
-    };
-
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    let text = response.text();
-
-    // 3. LIMPIEZA DE SEGURIDAD (Quitamos comillas raras o bloques de código)
-    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Error conectando con Gemini: ${response.statusText}`);
   }
+
+  const data = await response.json();
+  let text = data.candidates[0].content.parts[0].text;
+
+  // Limpieza de seguridad (Quitamos comillas o bloques de código que pueda poner la IA)
+  text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+  return JSON.parse(text);
 }
