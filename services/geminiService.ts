@@ -11,7 +11,7 @@ export async function extractPickingData(base64Image: string) {
 
     const prompt = "Extract all picking rows from this table. Fields: line, location, article, quantity, unit. Return ONLY a raw JSON array. No Markdown.";
 
-    // Limpiamos la imagen
+    // Limpiamos la imagen por si viene con cabeceras data:image...
     const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
     const imagePart = {
@@ -25,7 +25,7 @@ export async function extractPickingData(base64Image: string) {
     const response = await result.response;
     let text = response.text();
 
-    // 3. LIMPIEZA DE SEGURIDAD (Quitamos comillas raras o bloques ```json)
+    // 3. LIMPIEZA DE SEGURIDAD (Quitamos comillas raras o bloques de código)
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
     return JSON.parse(text);
@@ -33,3 +33,4 @@ export async function extractPickingData(base64Image: string) {
     console.error("Gemini Error:", error);
     throw error;
   }
+}
