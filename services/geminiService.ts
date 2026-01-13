@@ -1,11 +1,11 @@
-// CLAVE MAESTRA (Directa para evitar fallos)
-const apiKey = "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo";
+// CLAVE NUEVA (La correcta de Gemini)
+const apiKey = "AIzaSyD5CdzNg0QQp06Z6WrIyDmsTomHiDSPmEE";
 
 export async function extractPickingData(base64Image: string) {
   // Limpiamos la imagen
   const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-  // URL directa a Google (Sin librerías raras)
+  // URL directa a Google
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
@@ -28,9 +28,15 @@ export async function extractPickingData(base64Image: string) {
   }
 
   const data = await response.json();
+  
+  // Protección extra por si la IA devuelve vacío
+  if (!data.candidates || !data.candidates[0].content) {
+    throw new Error("La IA no ha devuelto datos legibles.");
+  }
+
   let text = data.candidates[0].content.parts[0].text;
 
-  // Limpieza de seguridad (Quitamos comillas o bloques de código que pueda poner la IA)
+  // Limpieza de seguridad
   text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
   return JSON.parse(text);
