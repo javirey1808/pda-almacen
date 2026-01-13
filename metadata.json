@@ -1,0 +1,7 @@
+{
+  "name": "SGA Picking Pro",
+  "description": "A Warehouse Management System (SGA) for logistics picking. Admins upload picking lists as images which are parsed by AI, and operators use a mobile interface to scan serial numbers and complete orders.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
