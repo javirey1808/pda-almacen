@@ -1,7 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Initialize the Gemini API client directly using the process.env.API_KEY constant as per guidelines.
-const ai = new GoogleGenAI({ apiKey: "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo" });
+// 1. CLAVE PUESTA A FUEGO (Para que no falle nunca)
+const apiKey = "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo";
+
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 const pickingSchema = {
   type: Type.ARRAY,
@@ -20,11 +22,13 @@ const pickingSchema = {
 
 export async function extractPickingData(base64Image: string) {
   try {
+    // 2. CORRECCIÓN VITAL: Usamos 'gemini-1.5-flash' que sí existe
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-1.5-flash', 
       contents: {
         parts: [
-          { inlineData: { mimeType: 'image/png', data: base64Image.split(',')[1] } },
+          // Limpiamos la imagen por si acaso viene con cabeceras
+          { inlineData: { mimeType: 'image/png', data: base64Image.includes(',') ? base64Image.split(',')[1] : base64Image } },
           { text: 'Extract all picking rows from this table. Identify Linea (Line), Ubicacion (Location), Articulo (Article) and Cantidad (Quantity). Return as a structured JSON array.' }
         ]
       },
@@ -34,13 +38,11 @@ export async function extractPickingData(base64Image: string) {
       }
     });
 
-    // Access the .text property directly as it is a getter, not a method.
     const text = response.text;
     if (!text) throw new Error("No data extracted");
-    // Trim the text result to ensure valid JSON parsing.
+    
     return JSON.parse(text.trim());
   } catch (error) {
     console.error("Gemini Extraction Error:", error);
     throw error;
   }
-}
