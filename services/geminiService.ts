@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Initialize the Gemini API client directly using the process.env.API_KEY constant as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo" });
 
 const pickingSchema = {
   type: Type.ARRAY,
