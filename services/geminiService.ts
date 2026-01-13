@@ -1,12 +1,12 @@
-// CLAVE NUEVA (La correcta de Gemini)
+// CLAVE MAESTRA (Tu clave nueva)
 const apiKey = "AIzaSyD5CdzNg0QQp06Z6WrIyDmsTomHiDSPmEE";
 
 export async function extractPickingData(base64Image: string) {
   // Limpiamos la imagen
   const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-  // URL directa a Google
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // CORRECCIÓN CLAVE: Usamos la versión exacta 'gemini-1.5-flash-001' para evitar el error 404
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: "POST",
@@ -24,19 +24,19 @@ export async function extractPickingData(base64Image: string) {
   });
 
   if (!response.ok) {
-    throw new Error(`Error conectando con Gemini: ${response.statusText}`);
+    // Si falla, mostramos el error real en la consola para verlo
+    const errorText = await response.text();
+    console.error("Detalle del error de Gemini:", errorText);
+    throw new Error(`Error ${response.status}: ${response.statusText}`);
   }
 
   const data = await response.json();
   
-  // Protección extra por si la IA devuelve vacío
   if (!data.candidates || !data.candidates[0].content) {
     throw new Error("La IA no ha devuelto datos legibles.");
   }
 
   let text = data.candidates[0].content.parts[0].text;
-
-  // Limpieza de seguridad
   text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
   return JSON.parse(text);
