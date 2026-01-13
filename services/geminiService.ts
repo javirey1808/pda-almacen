@@ -1,48 +1,35 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// 1. CLAVE PUESTA A FUEGO (Para que no falle nunca)
+// 1. CLAVE MAESTRA (Directa para evitar fallos)
 const apiKey = "AIzaSyDMoQviyboqko5kL_kDVZkElxDnqoUhGpo";
-
-const ai = new GoogleGenAI({ apiKey: apiKey });
-
-const pickingSchema = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      line: { type: Type.STRING, description: 'Line number (e.g., 1, 2, 3)' },
-      location: { type: Type.STRING, description: 'Storage Location (e.g., A1-20-09-10-01)' },
-      article: { type: Type.STRING, description: 'Article Number or Code' },
-      quantity: { type: Type.NUMBER, description: 'Amount of cases/units' },
-      unit: { type: Type.STRING, description: 'Unit type (e.g., CT, UN)' }
-    },
-    required: ['line', 'location', 'article', 'quantity'],
-  },
-};
+const genAI = new GoogleGenerativeAI(apiKey);
 
 export async function extractPickingData(base64Image: string) {
   try {
-    // 2. CORRECCIÓN VITAL: Usamos 'gemini-1.5-flash' que sí existe
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash', 
-      contents: {
-        parts: [
-          // Limpiamos la imagen por si acaso viene con cabeceras
-          { inlineData: { mimeType: 'image/png', data: base64Image.includes(',') ? base64Image.split(',')[1] : base64Image } },
-          { text: 'Extract all picking rows from this table. Identify Linea (Line), Ubicacion (Location), Articulo (Article) and Cantidad (Quantity). Return as a structured JSON array.' }
-        ]
-      },
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: pickingSchema,
-      }
-    });
+    // 2. MODELO SEGURO (Gemini 1.5 Flash)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const text = response.text;
-    if (!text) throw new Error("No data extracted");
-    
-    return JSON.parse(text.trim());
+    const prompt = "Extract all picking rows from this table. Fields: line, location, article, quantity, unit. Return ONLY a raw JSON array. No Markdown.";
+
+    // Limpiamos la imagen
+    const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+    const imagePart = {
+      inlineData: {
+        data: cleanBase64,
+        mimeType: "image/png"
+      }
+    };
+
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    let text = response.text();
+
+    // 3. LIMPIEZA DE SEGURIDAD (Quitamos comillas raras o bloques ```json)
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    return JSON.parse(text);
   } catch (error) {
-    console.error("Gemini Extraction Error:", error);
+    console.error("Gemini Error:", error);
     throw error;
   }
